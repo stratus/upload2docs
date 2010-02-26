@@ -1,0 +1,136 @@
+#!/usr/bin/env python
+#
+# Copyright 2010 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing sharepermissions and
+# limitations under the License.
+
+"""upload2docs."""
+
+__author__ = 'stratus@google.com (Gustavo Franco)'
+
+import getopt
+import getpass
+import logging
+import os
+import sys
+import vfs
+
+
+def usage():
+  print('upload2docs\n\n'
+        'Usage:\n ./upload2docs --path <path> --email <foo@example.com> or\n'
+        './upload2docs --path <path> --email <f@example.com> \\\n'
+        '--sharewith <b@example.com> --sharetype user --shareperm writer \n\n'
+        '--path <path>: Path to the share that will be uploaded.\n'
+        '--email <email>: Google Docs Premier Account - foo@example.com\n'
+        '--password <password>: Password for the account, prompted if not given. [optional]\n'
+        '--sharewith <friend@example.com>: Share sharepermission with another user, group or domain. [optional]\n'
+        '--sharetype <user, domain or group>: sharetype of share - user, domain or group. [optional]\n'
+        '--shareperm <reader, writer or owner>: sharepermission to share - reader, writer or owner. [optional]\n')
+
+
+def main(argv):
+  logging.basicConfig(level=logging.INFO)
+  logger = logging.getLogger('upload2docs')
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], '', ['path=', 'email=',
+                                                  'password=', 'shareperm=',
+                                                  'sharetype=', 'sharewith=',
+                                                  'help', 'debug'])
+  except getopt.GetoptError, err:
+    logger.error('Error while parsing arguments %s.', str(err))
+    usage()
+    sys.exit(2)
+  path = None
+  email = None
+  password = None
+  shareperm = None
+  sharetype = None
+  sharewith = None
+  debug = None
+  for opt, arg in opts:
+    if opt == '--help':
+      usage()
+      sys.exit()
+    if opt == '--debug':
+      logger.setLevel(logging.DEBUG)
+      debug = True
+    if opt == '--path':
+      path = arg
+    elif opt == '--email':
+      email = arg
+    elif opt == '--password':
+      password = arg
+    elif opt == '--shareperm':
+      shareperm = arg
+    elif opt == '--sharetype':
+      sharetype = arg
+    elif opt == '--sharewith':
+      sharewith = arg
+
+  if path is None or email is None:
+    logger.error('Please set --path and --email.')
+    sys.exit(2)
+  if email.endswith('gmail.com'):
+    logger.error('Upload does not work with a regular Gmail account.')
+    sys.exit(2)
+  if not password:
+    password = getpass.getpass(prompt='Password for %s: ' % email)
+
+  if debug:
+    upload2docs = vfs.VFS(email, password, log_level='logging.DEBUG')
+  else:
+    upload2docs = vfs.VFS(email, password)
+  if os.path.isdir(path):
+    dir_entry = upload2docs.Mkdir(path)
+    if dir_entry.title.text:
+      logger.info('Directory %s was created.', dir_entry.title.text)
+    else:
+      logger.info('Failure while trying to create %s directory.', path)
+    if shareperm and sharetype and sharewith:
+      acl = upload2docs.Chmod(sharetype, sharewith, shareperm, dir_entry)
+      if acl.scope.type:
+        logger.info('Giving %s %s %s privileges.', sharetype, sharewith,
+                    shareperm)
+      else:
+        logger.info('Failure while trying to set permissions to %s',
+                    dir_entry.title.text)
+    for root, dirs, files in os.walk(path):
+      for name in files:
+        logger.debug('Found %s in %s path.', name, root)
+        filepath = os.path.join(root, name)
+        logger.info('Trying to upload %s to %s as %s.', filepath, path,
+                    name)
+        entry = upload2docs.Copy(filepath, title=name, target=dir_entry)
+        if entry.quota_bytes_used.text:
+          logger.info('File %s was uploaded and is using %s bytes.', filepath,
+                      entry.quota_bytes_used.text)
+          logger.info('File %s URL is %s', filepath,
+                      entry.GetAlternateLink().href)
+        else:
+          logger.info('Failure while trying to upload %s', filepath)
+      for name in dirs:
+        logger.info('Trying to create %s subdirectory in docs.', name)
+        dir_entry = upload2docs.Mkdir(name, dir_entry)
+        if dir_entry.title.text:
+          logger.info('Subdirectory %s created.', dir_entry.title.text)
+        else:
+          logger.info('Failure while trying to create %s.', name)
+
+  elif os.path.isfile(path):
+    upload2docs.Copy(path)
+  else:
+    logger.error('Sorry, but %s must be a directory or file.', path)
+
+if __name__ == '__main__':
+  main(sys.argv[1:])
