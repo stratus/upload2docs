@@ -39,6 +39,62 @@ def usage():
         '--shareperm <reader, writer or owner>: sharepermission to share - reader, writer or owner. [optional]\n')
 
 
+class upload2docs(object):
+  """upload2docs object."""
+  def __init__(self, email, password):
+    try:
+      if debug:
+	upload2docs = vfs.VFS(email, password, log_level='logging.DEBUG')
+      else:
+	upload2docs = vfs.VFS(email, password)
+    except vfs.CaptchaChallenge:
+      sys.exit(2)
+  
+    self.Upload()
+  
+  def Upload(self):
+    if os.path.isdir(path):
+      dir_entry = upload2docs.Mkdir(path)
+    if dir_entry.title.text:
+      logger.info('Directory %s was created.', dir_entry.title.text)
+    else:
+      logger.info('Failure while trying to create %s directory.', path)
+    if shareperm and sharetype and sharewith:
+      acl = upload2docs.Chmod(sharetype, sharewith, shareperm, dir_entry)
+      if acl.scope.type:
+        logger.info('Giving %s %s %s privileges.', sharetype, sharewith,
+                    shareperm)
+      else:
+        logger.info('Failure while trying to set permissions to %s',
+                    dir_entry.title.text)
+    for root, dirs, files in os.walk(path):
+      for name in files:
+        logger.debug('Found %s in %s path.', name, root)
+        filepath = os.path.join(root, name)
+        logger.info('Trying to upload %s to %s as %s.', filepath, path,
+                    name)
+        entry = upload2docs.Copy(filepath, title=name, target=dir_entry)
+        if entry.quota_bytes_used.text:
+          logger.info('File %s was uploaded and is using %s bytes.', filepath,
+                      entry.quota_bytes_used.text)
+          logger.info('File %s URL is %s', filepath,
+                      entry.GetAlternateLink().href)
+        else:
+          logger.info('Failure while trying to upload %s', filepath)
+      for name in dirs:
+        logger.info('Trying to create %s subdirectory in docs.', name)
+        dir_entry = upload2docs.Mkdir(name, dir_entry)
+        if dir_entry.title.text:
+          logger.info('Subdirectory %s created.', dir_entry.title.text)
+        else:
+          logger.info('Failure while trying to create %s.', name)
+
+  elif os.path.isfile(path):
+    upload2docs.Copy(path)
+  else:
+    logger.error('Sorry, but %s must be a directory or file.', path)
+
+
 def main(argv):
   logging.basicConfig(level=logging.INFO)
   logger = logging.getLogger('upload2docs')
@@ -87,54 +143,8 @@ def main(argv):
   if not password:
     password = getpass.getpass(prompt='Password for %s: ' % email)
 
-  try:
-    if debug:
-      upload2docs = vfs.VFS(email, password, log_level='logging.DEBUG')
-    else:
-      upload2docs = vfs.VFS(email, password)
-  except vfs.CaptchaChallenge:
-    sys.exit(2)
-
-  if os.path.isdir(path):
-    dir_entry = upload2docs.Mkdir(path)
-    if dir_entry.title.text:
-      logger.info('Directory %s was created.', dir_entry.title.text)
-    else:
-      logger.info('Failure while trying to create %s directory.', path)
-    if shareperm and sharetype and sharewith:
-      acl = upload2docs.Chmod(sharetype, sharewith, shareperm, dir_entry)
-      if acl.scope.type:
-        logger.info('Giving %s %s %s privileges.', sharetype, sharewith,
-                    shareperm)
-      else:
-        logger.info('Failure while trying to set permissions to %s',
-                    dir_entry.title.text)
-    for root, dirs, files in os.walk(path):
-      for name in files:
-        logger.debug('Found %s in %s path.', name, root)
-        filepath = os.path.join(root, name)
-        logger.info('Trying to upload %s to %s as %s.', filepath, path,
-                    name)
-        entry = upload2docs.Copy(filepath, title=name, target=dir_entry)
-        if entry.quota_bytes_used.text:
-          logger.info('File %s was uploaded and is using %s bytes.', filepath,
-                      entry.quota_bytes_used.text)
-          logger.info('File %s URL is %s', filepath,
-                      entry.GetAlternateLink().href)
-        else:
-          logger.info('Failure while trying to upload %s', filepath)
-      for name in dirs:
-        logger.info('Trying to create %s subdirectory in docs.', name)
-        dir_entry = upload2docs.Mkdir(name, dir_entry)
-        if dir_entry.title.text:
-          logger.info('Subdirectory %s created.', dir_entry.title.text)
-        else:
-          logger.info('Failure while trying to create %s.', name)
-
-  elif os.path.isfile(path):
-    upload2docs.Copy(path)
-  else:
-    logger.error('Sorry, but %s must be a directory or file.', path)
+  uploader = upload2docs(email, password)
+  uploader.Upload()
 
 if __name__ == '__main__':
   main(sys.argv[1:])
