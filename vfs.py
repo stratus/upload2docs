@@ -45,6 +45,9 @@ class VFS(object):
       log_level: (optional) logging.LEVEL default is logging.INFO.
       http_debug: (optional) Set True if you want http debug info.
       source: (optional) Source client to tell the server company-app.
+
+    Raises:
+      CaptchaChallenge if server tells it's required.
     """
     self.gd_client = gdata.docs.client.DocsClient()
     self.gd_client.email = email
