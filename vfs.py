@@ -29,22 +29,30 @@ CONTENT_TYPE_FALLBACK = 'application/octet-stream'
 
 
 class VFS(object):
-  """A Virtual File System object to Google Docs."""
+  """A Virtual File System object for the Google DocList API."""
 
-  def __init__(self, email, password, source=None, additional_headers=None,
-               log_level=None, http_debug=None):
+  def __init__(self, email, password,
+               additional_headers={'GData-Version': 3.0},
+	       log_level=logging.INFO,
+	       http_debug=None, source='google-upload2docsvfs'):
+    """Constructs a new VFS for the Google DocList API.
+
+    Args:
+      email: Email to use for ClientLogin authentication.
+      password: Password to use for ClientLogin authentication.
+      additional_headers: (optional) Headers to send to server.
+      log_level: (optional) logging.LEVEL default is logging.INFO.
+      http_debug: (optional) Set True if you want http debug info.
+      source: (optional) Source client to tell the server company-app.
+    """
     self.gd_client = gdata.docs.client.DocsClient()
     self.gd_client.email = email
     self.gd_client.password = password
     if http_debug:
       self.gd_client.http_client.debug = True
-    if not source:
-      self.gd_client.source = 'google-upload2docsvfs'
-    else:
+    if source:
       self.gd_client.source = source
-    if not additional_headers:
-      self.gd_client.additional_headers = {'GData-Version': 3.0}
-    else:
+    if additional_headers:
       self.gd_client.additional_headers = additional_headers
     self.logger = logging.getLogger('vfs')
     if log_level:
