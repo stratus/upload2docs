@@ -26,6 +26,7 @@ import gdata.acl.data
 import gdata.docs.client
 
 CONTENT_TYPE_FALLBACK = 'application/octet-stream'
+CAPTCHA_CHALLENGE_URL = 'https://www.google.com/accounts/DisplayUnlockCaptcha'
 
 
 class VFS(object):
@@ -62,8 +63,15 @@ class VFS(object):
     self.logger.debug('source is set to %s.', self.gd_client.source)
     self.logger.debug('additional_headers is set to %s.',
                       self.gd_client.additional_headers)
-    self.gd_client.ClientLogin(self.gd_client.email, self.gd_client.password,
-                               self.gd_client.source)
+    try:
+      self.gd_client.ClientLogin(self.gd_client.email,
+	                         self.gd_client.password,
+				 self.gd_client.source)
+    except gdata.client.CaptchaChallenge:
+      logging.error('Sorry, but this machine was caught by a CAPTCHA.')
+      logging.error('Please go to %s', CAPTCHA_CHALLENGE_URL)
+      logging.error('Answer the CAPTCHA challenge there and rerun this.')
+      raise CaptchaChallenge, '%s' % CAPTCHA_CHALLENGE_URL
 
   def Copy(self, path, title=None, target=None):
     """Copy a file to Google Docs.

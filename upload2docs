@@ -87,10 +87,14 @@ def main(argv):
   if not password:
     password = getpass.getpass(prompt='Password for %s: ' % email)
 
-  if debug:
-    upload2docs = vfs.VFS(email, password, log_level='logging.DEBUG')
-  else:
-    upload2docs = vfs.VFS(email, password)
+  try:
+    if debug:
+      upload2docs = vfs.VFS(email, password, log_level='logging.DEBUG')
+    else:
+      upload2docs = vfs.VFS(email, password)
+  except vfs.CaptchaChallenge:
+    sys.exit(2)
+
   if os.path.isdir(path):
     dir_entry = upload2docs.Mkdir(path)
     if dir_entry.title.text:
