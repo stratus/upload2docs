@@ -31,12 +31,12 @@ def usage():
         'Usage:\n ./upload2docs --path <path> --email <foo@example.com> or\n'
         './upload2docs --path <path> --email <f@example.com> \\\n'
         '--sharewith <b@example.com> --sharetype user --shareperm writer \n\n'
-        '--path <path>: Path to the share that will be uploaded.\n'
+        '--path <path>: Path to the directory that will be uploaded.\n'
         '--email <email>: Google Docs Premier Account - foo@example.com\n'
         '--password <password>: Password for the account, prompted if not given. [optional]\n'
-        '--sharewith <friend@example.com>: Share sharepermission with another user, group or domain. [optional]\n'
-        '--sharetype <user, domain or group>: sharetype of share - user, domain or group. [optional]\n'
-        '--shareperm <reader, writer or owner>: sharepermission to share - reader, writer or owner. [optional]\n')
+        '--sharewith <friend@example.com>: Share privileges with another user, group or domain. [optional]\n'
+        '--sharetype <user, domain or group>: You are sharing with... - user, domain or group. [optional]\n'
+        '--shareperm <reader, writer or owner>: Privileges to share - reader, writer or owner. [optional]\n')
 
 
 def main(argv):
